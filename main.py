@@ -3,6 +3,7 @@ import uuid
 import torch
 import warnings
 import torchaudio
+import numpy as np
 import gradio as gr
 from einops import rearrange
 from langdetect import detect
@@ -14,7 +15,7 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
 
 warnings.filterwarnings("ignore")
 
-os.environ["HF_TOKEN"] = "hf_xxxx"
+os.environ["HF_TOKEN"] = "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"
 
 class JukeBox:
     def __init__(self):
@@ -89,7 +90,7 @@ class JukeBox:
         return translator
  
 
-    def generate_audio(self, prompt, sampler_type_dropdown, seconds_total=30, steps=100, cfg_scale=7, sigma_min_slider=0.3, sigma_max_slider=500):
+    def generate_audio(self, prompt, sampler_type_dropdown, seconds_total=30, steps=100, cfg_scale=7, sigma_min_slider=0.3, sigma_max_slider=500, seed=-1):
         prompt = self.lang_check_then_convert(prompt)
         
         print(f"Prompt received: {prompt}")
@@ -122,6 +123,8 @@ class JukeBox:
 
         # Generate stereo audio
         print("Generating audio...")
+        if seed == -1:
+            seed = np.random.randint(low=0, high=2**31 - 1, dtype=np.int32)
         output = generate_diffusion_cond(
             model,
             steps=steps,
@@ -131,6 +134,7 @@ class JukeBox:
             sigma_min=sigma_min_slider,
             sigma_max=sigma_max_slider,
             sampler_type=sampler_type_dropdown, 
+            seed=seed,
             device=device
         )
         print("Audio generated.")
@@ -151,7 +155,7 @@ class JukeBox:
         current_date = now.strftime("%Y_%m_%d")
         if not os.path.exists(f"{self.output_path}/{current_date}"):
             os.makedirs(f"{self.output_path}/{current_date}")
-        unique_filename = f"{str(uuid.uuid4())}.mav"
+        unique_filename = f"{self.output_path}/{current_date}/{str(uuid.uuid4())}.wav"
         print(f"Saving audio to file: {unique_filename}")
 
         # Save to file
@@ -166,17 +170,18 @@ class JukeBox:
         interface = gr.Interface(
             fn=self.generate_audio,
             inputs=[
-                gr.Textbox(label="Prompt", placeholder="Enter your text prompt here"),
-                gr.Dropdown(["dpmpp-2m-sde", "dpmpp-3m-sde", "k-heun", "k-lms", "k-dpmpp-2s-ancestral", "k-dpm-2", "k-dpm-fast"], label="Sampler type", value="dpmpp-3m-sde"),
-                gr.Slider(0, 47, value=30, step=1, label="Duration in Seconds"),
-                gr.Slider(10, 150, value=100, step=10, label="Number of Diffusion Steps"),
+                gr.Textbox(label="Prompt(영어로 입력하면 바로 생성, 한글을 입력하면 영어로 번역 후 생성)", placeholder="이곳에 입력하세요."),
+                gr.Dropdown(["dpmpp-2m-sde", "dpmpp-3m-sde", "k-heun", "k-lms", "k-dpmpp-2s-ancestral", "k-dpm-2", "k-dpm-fast"], label="샘플러 종류", value="dpmpp-3m-sde"),
+                gr.Slider(0, 48, value=30, step=1, label="생성할 시간(단위 : 초)"),
+                gr.Slider(10, 150, value=100, step=10, label="확산 단계 수"),
                 gr.Slider(1, 15, value=7, step=0.1, label="CFG Scale"),        
                 gr.Slider(minimum=0.0, maximum=5.0, step=0.01, value=0.3, label="Sigma min"),
                 gr.Slider(minimum=0.0, maximum=1000.0, step=0.1, value=500, label="Sigma max"),
+                gr.Slider(minimum=-1, maximum=2**31 - 1, step=1, value=-1, label="Seed"),
             ],
             outputs=gr.Audio(type="filepath", label="Generated Audio"),
-            title="Stable Audio Generator",
-            description="Generate variable-length stereo audio at 44.1kHz from text prompts using Stable Audio Open 1.0.",
+            title="쥬크박스",
+            description="Stable Audio Open 1.0을 사용하여 텍스트 프롬프트에서 44.1kHz의 가변 길이 스테레오 오디오를 생성합니다.",
             examples=[
                 [
                     "Create a serene soundscape of a quiet beach at sunset.",  # Text prompt
@@ -185,7 +190,8 @@ class JukeBox:
                     100,  # Number of Diffusion Steps
                     10,  # CFG Scale
                     0.5,  # Sigma min
-                    800  # Sigma max
+                    800,  # Sigma max
+                    42
                 ],
                 [
                     "clapping",  # Text prompt
@@ -194,7 +200,8 @@ class JukeBox:
                     100,  # Number of Diffusion Steps
                     7,  # CFG Scale
                     0.5,  # Sigma min
-                    500  # Sigma max
+                    500,  # Sigma max
+                    42
                 ],
                 [
                     "Simulate a forest ambiance with birds chirping and wind rustling through the leaves.",  # Text prompt
@@ -203,7 +210,8 @@ class JukeBox:
                     140,  # Number of Diffusion Steps
                     7.5,  # CFG Scale
                     0.3,  # Sigma min
-                    700  # Sigma max
+                    700,  # Sigma max
+                    42
                 ],
                 [
                     "Recreate a gentle rainfall with distant thunder.",  # Text prompt
@@ -212,7 +220,8 @@ class JukeBox:
                     110,  # Number of Diffusion Steps
                     8,  # CFG Scale
                     0.1,  # Sigma min
-                    500  # Sigma max
+                    500,  # Sigma max
+                    42
                 ],
                 [
                     "Imagine a jazz cafe environment with soft music and ambient chatter.",  # Text prompt
@@ -221,7 +230,8 @@ class JukeBox:
                     90,  # Number of Diffusion Steps
                     6,  # CFG Scale
                     0.4,  # Sigma min
-                    650  # Sigma max
+                    650,  # Sigma max
+                    42
                 ],
                 [
                     "Rock beat played in a treated studio, session drumming on an acoustic kit.",
@@ -230,7 +240,8 @@ class JukeBox:
                     100,  # Number of Diffusion Steps
                     7,  # CFG Scale
                     0.3,  # Sigma min
-                    500  # Sigma max
+                    500,  # Sigma max
+                    42
                 ]
             ]
         )
