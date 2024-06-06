@@ -15,7 +15,7 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
 
 warnings.filterwarnings("ignore")
 
-os.environ["HF_TOKEN"] = "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"
+os.environ["HF_TOKEN"] = "hf_xxx"
 
 class JukeBox:
     def __init__(self):
