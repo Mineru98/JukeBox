@@ -1,0 +1,9 @@
+--extra-index-url https://download.pytorch.org/whl/cu118
+torch
+torchaudio
+gradio==4.29.0
+transformers>=4.40.0
+langdetect
+packaging
+einops
+stable-audio-tools
